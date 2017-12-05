@@ -25,7 +25,10 @@ define(
       var div = document.createElement('div');
       div.innerHTML = s;
 
-      function walkChildren(node, join=true){
+      function walkChildren(node, join){
+        if(typeof join === 'undefined'){
+          join = true;
+        }
         var out = [];
 
         node.childNodes.forEach(function(child_node){
@@ -119,7 +122,7 @@ define(
             return escape(node.textContent);
         }
         console.log('couldnt walk', node);
-        throw new Error(`couldnt walk ${node.nodeName}`);
+        throw new Error("couldnt walk " + node.nodeName);
       }
 
       var out = walkNode(div);

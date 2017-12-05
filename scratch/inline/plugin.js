@@ -141,77 +141,127 @@ define(
   ],
   function (Tools) {
     var html2markdown = function (s) {
-      s = Tools.trim(s);
 
-      var rep = function (re, str) {
-        s = s.replace(re, str);
+
+      var escape = function(str){
+        return str.replace(/([\\`*_{}[\]()#+.!-]|&gt;)/gi, '\\$1');
       };
 
-      // example: <strong> to [b]
-      rep(/<a.*?href=\"(.*?)\".*?>(.*?)<\/a>/gi, "[url=$1]$2[/url]");
-      rep(/<font.*?color=\"(.*?)\".*?class=\"codeStyle\".*?>(.*?)<\/font>/gi, "[code][color=$1]$2[/color][/code]");
-      rep(/<font.*?color=\"(.*?)\".*?class=\"quoteStyle\".*?>(.*?)<\/font>/gi, "[quote][color=$1]$2[/color][/quote]");
-      rep(/<font.*?class=\"codeStyle\".*?color=\"(.*?)\".*?>(.*?)<\/font>/gi, "[code][color=$1]$2[/color][/code]");
-      rep(/<font.*?class=\"quoteStyle\".*?color=\"(.*?)\".*?>(.*?)<\/font>/gi, "[quote][color=$1]$2[/color][/quote]");
-      rep(/<span style=\"color: ?(.*?);\">(.*?)<\/span>/gi, "[color=$1]$2[/color]");
-      rep(/<font.*?color=\"(.*?)\".*?>(.*?)<\/font>/gi, "[color=$1]$2[/color]");
-      rep(/<span style=\"font-size:(.*?);\">(.*?)<\/span>/gi, "[size=$1]$2[/size]");
-      rep(/<font>(.*?)<\/font>/gi, "$1");
-      rep(/<img.*?src=\"(.*?)\".*?\/>/gi, "[img]$1[/img]");
-      rep(/<span class=\"codeStyle\">(.*?)<\/span>/gi, "[code]$1[/code]");
-      rep(/<span class=\"quoteStyle\">(.*?)<\/span>/gi, "[quote]$1[/quote]");
-      rep(/<strong class=\"codeStyle\">(.*?)<\/strong>/gi, "[code][b]$1[/b][/code]");
-      rep(/<strong class=\"quoteStyle\">(.*?)<\/strong>/gi, "[quote][b]$1[/b][/quote]");
-      rep(/<em class=\"codeStyle\">(.*?)<\/em>/gi, "[code][i]$1[/i][/code]");
-      rep(/<em class=\"quoteStyle\">(.*?)<\/em>/gi, "[quote][i]$1[/i][/quote]");
-      rep(/<u class=\"codeStyle\">(.*?)<\/u>/gi, "[code][u]$1[/u][/code]");
-      rep(/<u class=\"quoteStyle\">(.*?)<\/u>/gi, "[quote][u]$1[/u][/quote]");
-      rep(/<\/(strong|b)>/gi, "[/b]");
-      rep(/<(strong|b)>/gi, "[b]");
-      rep(/<\/(em|i)>/gi, "[/i]");
-      rep(/<(em|i)>/gi, "[i]");
-      rep(/<\/u>/gi, "[/u]");
-      rep(/<span style=\"text-decoration: ?underline;\">(.*?)<\/span>/gi, "[u]$1[/u]");
-      rep(/<u>/gi, "[u]");
-      rep(/<blockquote[^>]*>/gi, "[quote]");
-      rep(/<\/blockquote>/gi, "[/quote]");
-      rep(/<br \/>/gi, "\n");
-      rep(/<br\/>/gi, "\n");
-      rep(/<br>/gi, "\n");
-      rep(/<p>/gi, "");
-      rep(/<\/p>/gi, "\n");
-      rep(/&nbsp;|\u00a0/gi, " ");
-      rep(/&quot;/gi, "\"");
-      rep(/&lt;/gi, "<");
-      rep(/&gt;/gi, ">");
-      rep(/&amp;/gi, "&");
+      // force html to be valid
+      var div = document.createElement('div');
+      div.innerHTML = s;
 
-      return s;
+      function walkChildren(node, join){
+        if(typeof join === 'undefined'){
+          join = true;
+        }
+        var out = [];
+
+        node.childNodes.forEach(function(child_node){
+          out.push(walkNode(child_node));
+        });
+
+        if(!join){
+          return out;
+        }
+
+        return out.join('');
+      }
+
+      function walkNode(node){
+        switch(node.nodeName.toLowerCase()){
+          case 'strong':
+          case 'b':
+            return '**' + walkChildren(node) + '**';
+
+          case 'em':
+          case 'i':
+            return '*' + walkChildren(node) + '*';
+
+          case 'a':
+            return '[' + walkChildren(node) + '](' + escape(node.href) + ')';
+
+          case 'h1':
+          case 'h2':
+          case 'h3':
+          case 'h4':
+          case 'h5':
+          case 'h6':
+            var out = '';
+            var octothorps = parseInt(node.nodeName.slice(1), 10)
+            for(var i = 0; i < octothorps; i += 1) {
+              out += '#';
+            }
+            return out + ' ' + walkChildren(node) + '';
+
+          case 'br':
+            return "\n";
+
+          case 'p':
+            return walkChildren(node) + "\n";
+            break;
+
+          case 'pre':
+            return '``' + walkChildren(node) + '``';
+
+          case 'code':
+            return '`' + node.textContent + '`';
+
+          case 'ul':
+            var ul_out = [];
+            var add_spaces = false;
+            // add spaces to beginning of each if its a child of another list
+            if(node.parentNode.nodeName.toLowerCase() === 'li'){
+              add_spaces = true;
+            }
+
+            node.childNodes.forEach(function(child_node){
+              if(child_node.nodeName.toLowerCase() !== '#text'){
+                ul_out.push('* ' + walkChildren(child_node));
+              }
+            });
+
+            if(node.parentNode.nodeName.toLowerCase() === 'li'){
+              for(var i = 0; i < ul_out.length; i += 1){
+                var sub_lines = ul_out[i].split("\n");
+                for(var j=0; j < sub_lines.length; j+=1){
+                  sub_lines[j] = '  ' + sub_lines[j];
+                }
+                ul_out[i] = sub_lines.join('\n');
+              }
+            }
+
+            return ul_out.join('\n');
+
+          case 'blockquote':
+            var lines = walkChildren(node).split("\n");
+            for(var i=0; i < lines.length; i+=1){
+              lines[i] = '> ' + lines[i];
+            }
+
+            return lines.join("\n");
+
+          case 'div':
+            return walkChildren(node);
+
+          case '#text':
+            return escape(node.textContent);
+        }
+        console.log('couldnt walk', node);
+        throw new Error("couldnt walk " + node.nodeName);
+      }
+
+      var out = walkNode(div);
+      return out;
+
     };
 
     var markdown2html = function (s) {
-      s = Tools.trim(s);
+      var md = markdownit({
+        html: true
+      });
 
-      var rep = function (re, str) {
-        s = s.replace(re, str);
-      };
-
-      // example: [b] to <strong>
-      rep(/\n/gi, "<br />");
-      rep(/\[b\]/gi, "<strong>");
-      rep(/\[\/b\]/gi, "</strong>");
-      rep(/\[i\]/gi, "<em>");
-      rep(/\[\/i\]/gi, "</em>");
-      rep(/\[u\]/gi, "<u>");
-      rep(/\[\/u\]/gi, "</u>");
-      rep(/\[url=([^\]]+)\](.*?)\[\/url\]/gi, "<a href=\"$1\">$2</a>");
-      rep(/\[url\](.*?)\[\/url\]/gi, "<a href=\"$1\">$1</a>");
-      rep(/\[img\](.*?)\[\/img\]/gi, "<img src=\"$1\" />");
-      rep(/\[color=(.*?)\](.*?)\[\/color\]/gi, "<font color=\"$1\">$2</font>");
-      rep(/\[code\](.*?)\[\/code\]/gi, "<span class=\"codeStyle\">$1</span>&nbsp;");
-      rep(/\[quote.*?\](.*?)\[\/quote\]/gi, "<span class=\"quoteStyle\">$1</span>&nbsp;");
-
-      return s;
+      return md.render(s);
     };
 
     return {
