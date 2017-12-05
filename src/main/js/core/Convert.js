@@ -40,7 +40,6 @@ define(
       }
 
       function walkNode(node){
-        console.log(9456, node.nodeName)
         switch(node.nodeName.toLowerCase()){
           case 'strong':
           case 'b':
@@ -113,8 +112,6 @@ define(
 
             return lines.join("\n");
 
-
-
           case 'div':
             return walkChildren(node);
 
@@ -128,167 +125,6 @@ define(
       var out = walkNode(div);
       return out;
 
-      return div.innerHTML;
-
-
-
-      s = div.innerHTML;
-
-      s = Tools.trim(s);
-
-      var rep = function (re, str) {
-        s = s.replace(re, str);
-      };
-
-
-
-      var escapeNotHtml = function(str) {
-        console.log(99999, str)
-        var out = '';
-
-        var first_html_index;
-
-        var prev_length;
-
-        while((first_html_index = str.search('<')) !== -1){
-          if(str.length === prev_length){
-            console.log(out, str);
-            throw new Error(`Recursion on escapeNotHtml("${str}", ${str.length}, ${prev_length})`);
-          }
-          prev_length = str.length;
-
-          out += escape(str.slice(0, first_html_index));
-
-          str = str.slice(first_html_index);
-
-          str = str.replace(/^<([a-z0-9-]+)([^>]*)>((?:.|\n)*?)<\/\1>(.*)$/i, function(z, open_tag, open_attrs, contents, extra){
-            // todo: handle open attrs escaping
-            open_attrs = open_attrs.replace(/"([^"]+)"="([^"]+)"/i, function(z, key, val){
-              return '"' + key + '"="' + escape(val) + '"';
-            });
-
-            // FIXME: cant use template string here in my editor for some reason. it makes everything explode
-            out += '<' + open_tag + open_attrs + '>' + escapeNotHtml(contents) + '</' + open_tag + '>';
-            return extra;
-          });
-        }
-
-        return out + escape(str);
-      };
-
-      // escape everything thats not html
-      // escape characters: [ ] \ _ * # - ! ` |  &gt;
-      s = escapeNotHtml(s);
-
-      // h1, h2, h3...
-      rep(/<h(\d)>(.*?)<\/h\1>/gi, function(z, h_num, contents){
-        var out = '';
-        for(var i = 0; i < h_num; i += 1){
-          out += '#';
-        }
-        out += ' ' + contents;
-        return out;
-      });
-
-      // strong
-      rep(/<(strong|b)>(.*?)<\/\1>/gi, "**$2**");
-
-      // em
-      rep(/<(em|i)>(.*?)<\/\1>/gi, "*$2*");
-
-      // links
-      rep(/<a.*?href=\"(.*?)\".*?>(.*?)<\/a>/gi, "[$2]($1)");
-
-      // images
-      rep(/<img(.*?)\/?>/gi, function(z, attrs){
-        var src = '';
-        var alt = '';
-
-        attrs.replace(/"([^"]+)"="([^"]+)"/i, function(z, key, val){
-          switch(key.toLowerCase()){
-            case 'src':
-              src = val;
-              break;
-            case 'alt':
-              alt = val;
-              break;
-          }
-        });
-
-        return '![' + alt + '](' + src + ')'
-      });
-
-      // code
-      rep(/<pre><code>(.*?)<\/code><\/pre>/gi, "```$1```");
-      rep(/<code>(.*?)<\/code>/gi, "`$1`");
-
-
-      // linefeeds
-      // <br> -> \n
-      rep(/<br\s*\/?>/gi, "\n");
-      rep(/<p.*?>/gi, '');
-      rep(/<\/p>/gi, "\n");
-
-      // now handle the harder stuff...
-
-      // ul > li
-      // blockquote
-
-      // example: <strong> to [b]
-
-
-      return s;
-
-
-
-      // links
-
-      // images
-
-      // code
-
-      // table
-
-      // blockquotes
-
-      // hr
-
-
-      // rep(/<font.*?color=\"(.*?)\".*?class=\"codeStyle\".*?>(.*?)<\/font>/gi, "[code][color=$1]$2[/color][/code]");
-      // rep(/<font.*?color=\"(.*?)\".*?class=\"quoteStyle\".*?>(.*?)<\/font>/gi, "[quote][color=$1]$2[/color][/quote]");
-      // rep(/<font.*?class=\"codeStyle\".*?color=\"(.*?)\".*?>(.*?)<\/font>/gi, "[code][color=$1]$2[/color][/code]");
-      // rep(/<font.*?class=\"quoteStyle\".*?color=\"(.*?)\".*?>(.*?)<\/font>/gi, "[quote][color=$1]$2[/color][/quote]");
-      // rep(/<span style=\"color: ?(.*?);\">(.*?)<\/span>/gi, "[color=$1]$2[/color]");
-      // rep(/<font.*?color=\"(.*?)\".*?>(.*?)<\/font>/gi, "[color=$1]$2[/color]");
-      rep(/<span style=\"font-size:(.*?);\">(.*?)<\/span>/gi, "[size=$1]$2[/size]");
-      // rep(/<font>(.*?)<\/font>/gi, "$1");
-      rep(/<img.*?src=\"(.*?)\".*?\/>/gi, "[img]$1[/img]");
-      rep(/<span class=\"codeStyle\">(.*?)<\/span>/gi, "[code]$1[/code]");
-      rep(/<span class=\"quoteStyle\">(.*?)<\/span>/gi, "[quote]$1[/quote]");
-      rep(/<strong class=\"codeStyle\">(.*?)<\/strong>/gi, "[code][b]$1[/b][/code]");
-      rep(/<strong class=\"quoteStyle\">(.*?)<\/strong>/gi, "[quote][b]$1[/b][/quote]");
-      rep(/<em class=\"codeStyle\">(.*?)<\/em>/gi, "[code][i]$1[/i][/code]");
-      rep(/<em class=\"quoteStyle\">(.*?)<\/em>/gi, "[quote][i]$1[/i][/quote]");
-      // rep(/<u class=\"codeStyle\">(.*?)<\/u>/gi, "[code][u]$1[/u][/code]");
-      // rep(/<u class=\"quoteStyle\">(.*?)<\/u>/gi, "[quote][u]$1[/u][/quote]");
-      // rep(/<\/(strong|b)>/gi, "[/b]");
-      // rep(/<(strong|b)>/gi, "[b]");
-      // rep(/<\/(em|i)>/gi, "[/i]");
-      // rep(/<(em|i)>/gi, "[i]");
-      // rep(/<\/u>/gi, "[/u]");
-      // rep(/<span style=\"text-decoration: ?underline;\">(.*?)<\/span>/gi, "[u]$1[/u]");
-      // rep(/<u>/gi, "[u]");
-      rep(/<blockquote[^>]*>/gi, "[quote]");
-      rep(/<\/blockquote>/gi, "[/quote]");
-      rep(/<p>/gi, "");
-      rep(/<\/p>/gi, "\n");
-      rep(/&nbsp;|\u00a0/gi, " ");
-      rep(/&quot;/gi, "\"");
-      rep(/&lt;/gi, "<");
-      rep(/&gt;/gi, ">");
-      rep(/&amp;/gi, "&");
-
-      return s;
     };
 
     var markdown2html = function (s) {
