@@ -23,7 +23,7 @@ define(
 
       // force html to be valid
       var div = document.createElement('div');
-      div.innerHTML = s;
+      div.innerHTML = s.replace(/\r?\n/g, '');
 
       function walkChildren(node, join){
         if(typeof join === 'undefined'){
@@ -77,6 +77,9 @@ define(
           case 'a':
             return '[' + walkChildren(node) + '](' + escape(node.href) + ')';
 
+          case 'img':
+            return '![' + node.alt + '](' + escape(node.src) + ')';
+
           case 'h1':
           case 'h2':
           case 'h3':
@@ -84,7 +87,7 @@ define(
           case 'h5':
           case 'h6':
             var out = '';
-            var octothorps = parseInt(node.nodeName.slice(1), 10)
+            var octothorps = parseInt(node.nodeName.slice(1), 10);
             for(var i = 0; i < octothorps; i += 1) {
               out += '#';
             }
@@ -127,7 +130,7 @@ define(
               }
             }
 
-            return ul_out.join('\n');
+            return '\n' + ul_out.join('\n').replace(/\s+$/, '') + '\n';
 
           case 'blockquote':
             var lines = walkChildren(node).split("\n");
@@ -136,6 +139,30 @@ define(
             }
 
             return lines.join("\n");
+
+          case 'hr':
+            return '\n---\n';
+
+          case 'table':
+            return walkChildren(node);
+
+          case 'thead':
+            var children = walkChildren(node.childNodes[0], false);
+            var out = '';
+            for(var i = 0; i < children.length; i+=1){
+              out += '|-';
+            }
+            out += "|\n";
+            return walkChildren(node) + out;
+
+          case 'tr':
+            var children = walkChildren(node, false);
+            return '| ' + children.join(' | ') + ' |\n';
+
+          case 'tbody':
+          case 'td':
+          case 'th':
+            return walkChildren(node);
 
           case 'div':
             return walkChildren(node);
@@ -148,6 +175,9 @@ define(
       }
 
       var out = walkNode(div);
+      out = out.replace(/\n[\u0020\u00a0]?((?:\n[\u0020\u00a0])+)/g, function(z, linefeeds){
+        return linefeeds.replace(/\n[\u0020\u00a0]?/g, "\n\\");
+      });
       return out;
 
     };

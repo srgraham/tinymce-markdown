@@ -28,6 +28,22 @@ define(
       document.querySelector('.tinymce').value = '\\*ma**rkdown plu**g*in*\\*';
       document.querySelector('.tinymce').value = `
       
+      
+      
+| asdf | asdf | asfd |
+|------|------|------|
+| asdf | asdf | Asdf |
+| asdf | asdf | Asdf |
+| asdf | asdf | Asdf |
+| asdf | asdf | Asdf |
+| *asdf*
+| asdf
+
+![google](https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png)
+
+---
+      
+      
 # (GitHub-Flavored) Markdown Editor 
 
 Basic useful feature list:
