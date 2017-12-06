@@ -44,12 +44,34 @@ define(
 
       function walkNode(node){
         switch(node.nodeName.toLowerCase()){
+          // strong/b immediately followed by em/i needs *** and vice versa
+          // strong/b inside strong/b get collapsed. same with em/i
           case 'strong':
           case 'b':
+            if(node.childNodes.length === 1){
+              switch(node.childNodes[0].nodeName.toLowerCase()){
+                case 'em':
+                case 'i':
+                  return '**' + walkNode(node.childNodes[0]) + '**';
+                case 'strong':
+                case 'b':
+                  return walkNode(node.childNodes[0]);
+              }
+            }
             return '**' + walkChildren(node) + '**';
 
           case 'em':
           case 'i':
+            if(node.childNodes.length === 1){
+              switch(node.childNodes[0].nodeName.toLowerCase()){
+                case 'strong':
+                case 'b':
+                  return '*' + walkNode(node.childNodes[0]) + '*';
+                case 'em':
+                case 'i':
+                  return walkNode(node.childNodes[0]);
+              }
+            }
             return '*' + walkChildren(node) + '*';
 
           case 'a':
